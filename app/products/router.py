@@ -1,14 +1,14 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
+from app.dependencies import obtener_servicio
 from app.products.schemas import ProductoActualizar, ProductoCrear, ProductoDetalle
 from app.products.service import Service
 
 
 class Router:
-    """Traduce HTTP a llamadas del service. No guarda productos."""
+    """Traduce HTTP a llamadas del service. El service llega en cada pedido."""
 
-    def __init__(self, servicio: Service) -> None:
-        self._servicio = servicio
+    def __init__(self) -> None:
         self.router = APIRouter(prefix="/productos", tags=["productos"])
         self.router.add_api_route("", self.listar, methods=["GET"])
         self.router.add_api_route(
@@ -26,17 +26,34 @@ class Router:
             status_code=status.HTTP_204_NO_CONTENT,
         )
 
-    def listar(self) -> list[ProductoDetalle]:
-        return self._servicio.listar()
+    def listar(self, servicio: Service = Depends(obtener_servicio)) -> list[ProductoDetalle]:
+        return servicio.listar()
 
-    def crear(self, datos: ProductoCrear) -> ProductoDetalle:
-        return self._servicio.crear(datos)
+    def crear(
+        self,
+        datos: ProductoCrear,
+        servicio: Service = Depends(obtener_servicio),
+    ) -> ProductoDetalle:
+        return servicio.crear(datos)
 
-    def obtener(self, producto_id: str) -> ProductoDetalle:
-        return self._servicio.obtener(producto_id)
+    def obtener(
+        self,
+        producto_id: str,
+        servicio: Service = Depends(obtener_servicio),
+    ) -> ProductoDetalle:
+        return servicio.obtener(producto_id)
 
-    def actualizar(self, producto_id: str, datos: ProductoActualizar) -> ProductoDetalle:
-        return self._servicio.actualizar(producto_id, datos)
+    def actualizar(
+        self,
+        producto_id: str,
+        datos: ProductoActualizar,
+        servicio: Service = Depends(obtener_servicio),
+    ) -> ProductoDetalle:
+        return servicio.actualizar(producto_id, datos)
 
-    def eliminar(self, producto_id: str) -> None:
-        self._servicio.eliminar(producto_id)
+    def eliminar(
+        self,
+        producto_id: str,
+        servicio: Service = Depends(obtener_servicio),
+    ) -> None:
+        servicio.eliminar(producto_id)

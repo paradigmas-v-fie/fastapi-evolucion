@@ -1,51 +1,77 @@
-# 05 — Repositorio
+# 06 — MongoDB
 
-El service ya no tiene la lista. Recibe un repositorio y le pide agregar,
-listar, obtener, actualizar y eliminar. La implementación de esta rama sigue
-siendo memoria: se puede correr sin Docker y se puede leer el contrato antes
-de ver MongoDB.
+El catálogo sobrevive al reinicio del proceso. `RepositorioMongo` cumple el
+mismo contrato que `RepositorioEnMemoria`. La API sigue corriendo en la
+máquina; Compose solo levanta la base.
 
-```text
-main  →  Router  →  Service  →  RepositorioEnMemoria  →  Producto
-```
-
-El router no se entera del cambio. Sigue llamando a `service.crear` y
-`service.listar`.
+La conexión no se abre al importar el módulo. Se abre en el arranque
+(`lifespan`) y cada pedido recibe el service ya conectado mediante `Depends`.
+Así un test puede usar memoria sin tener Docker, y el servidor no falla en el
+import si la base todavía no está.
 
 ## Cómo ejecutar
 
+Hace falta Docker.
+
 ```bash
 uv sync
+docker compose up -d
 uv run fastapi dev main.py
 ```
 
-El contrato HTTP es el de la rama anterior, incluido `precio_final`. Reiniciar
-el proceso sigue borrando el catálogo: la memoria no resuelve la persistencia,
-solo separa la responsabilidad.
+Esperá a que el contenedor esté sano (`docker compose ps`) antes de crear
+productos. Si la API arranca y Mongo no responde, el proceso termina con un
+mensaje de conexión en vez de quedar a medias.
+
+Los valores por defecto alcanzan para este Compose. Si querés dejarlos
+escritos:
+
+```bash
+cp .env.example .env
+```
+
+Para inspeccionar los documentos, MongoDB Compass usa:
+
+```text
+mongodb://root:example@localhost:27017
+```
+
+La base se llama `tienda` y la colección, `productos`. Esas credenciales son
+solo para el entorno local de la cursada.
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/productos \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Yerba","precio_base":1500}'
+```
+
+Reiniciá la API y volvé a listar: el producto sigue ahí. `docker compose down`
+no borra el volumen. `docker compose down -v` sí.
 
 ## Qué cambió
 
 ```bash
-git diff 04-dominio..05-repositorio
+git diff 05-repositorio..06-mongodb
 ```
 
-- `Repositorio` declara las operaciones. No es una clase de la que se hereda:
-  `RepositorioEnMemoria` cumple el contrato por tener esos métodos.
-- `Service` depende de ese contrato, no de un diccionario propio.
-- `app/main.py` es quien elige la implementación. Cambiar de memoria a Mongo
-  es cambiar esa elección, no las rutas.
+- `app/products/mongo_repository.py` traduce `Producto` a un documento y al revés.
+- `app/config.py` lee `MONGO_*`. Dentro de Compose, más adelante, `MONGO_HOST`
+  va a ser `db` y no `localhost`.
+- `app/main.py` elige `RepositorioMongo` al arrancar. Las rutas no se enteran.
 
-## Verificar
+## Verificar sin Docker
 
 ```bash
 bash verificar.sh
 ```
 
+Eso no prueba la conexión real. Prueba el mapeo del documento y que el
+contrato HTTP sigue igual contra el repositorio en memoria.
+
 ## Siguiente rama
 
-`06-mongodb` agrega `RepositorioMongo`. Para correrla hace falta levantar la
-base con Docker Compose; la API sigue arrancando con `uv run fastapi dev main.py`.
+`07-compose` mete también la API en Compose. Un comando levanta el ambiente.
 
 ```bash
-git switch 06-mongodb
+git switch 07-compose
 ```
