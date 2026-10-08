@@ -1,6 +1,20 @@
 name: tienda-api
 
 services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_HOST: db
+      MONGO_USER: root
+      MONGO_PASSWORD: example
+      MONGO_PORT: "27017"
+      MONGO_DB: tienda
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: mongo:7.0
     ports:

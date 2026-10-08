@@ -1,43 +1,23 @@
-# 06 — MongoDB
+# 07 — Compose
 
-El catálogo sobrevive al reinicio del proceso. `RepositorioMongo` cumple el
-mismo contrato que `RepositorioEnMemoria`. La API sigue corriendo en la
-máquina; Compose solo levanta la base.
+Un comando levanta la API y MongoDB. La aplicación que corre adentro del
+contenedor es la misma de la rama anterior: cambia el ambiente, no las capas.
 
-La conexión no se abre al importar el módulo. Se abre en el arranque
-(`lifespan`) y cada pedido recibe el service ya conectado mediante `Depends`.
-Así un test puede usar memoria sin tener Docker, y el servidor no falla en el
-import si la base todavía no está.
+Dentro de la red de Compose la base se llama `db`. Por eso el servicio `api`
+define `MONGO_HOST=db`. Si corrés la API en el host, el default sigue siendo
+`localhost`, porque el puerto `27017` está publicado.
 
-## Cómo ejecutar
+El contenedor usa `fastapi run`: sin recarga automática. Para programar con
+recarga, levantá solo la base y seguí usando `fastapi dev`.
 
-Hace falta Docker.
-
-```bash
-uv sync
-docker compose up -d
-uv run fastapi dev main.py
-```
-
-Esperá a que el contenedor esté sano (`docker compose ps`) antes de crear
-productos. Si la API arranca y Mongo no responde, el proceso termina con un
-mensaje de conexión en vez de quedar a medias.
-
-Los valores por defecto alcanzan para este Compose. Si querés dejarlos
-escritos:
+## Ambiente completo
 
 ```bash
-cp .env.example .env
+docker compose up --build
 ```
 
-Para inspeccionar los documentos, MongoDB Compass usa:
-
-```text
-mongodb://root:example@localhost:27017
-```
-
-La base se llama `tienda` y la colección, `productos`. Esas credenciales son
-solo para el entorno local de la cursada.
+La API queda en `http://127.0.0.1:8000`. Compose espera a que Mongo responda
+antes de arrancar la API.
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/productos \
@@ -45,33 +25,44 @@ curl -s -X POST http://127.0.0.1:8000/productos \
   -d '{"nombre":"Yerba","precio_base":1500}'
 ```
 
-Reiniciá la API y volvé a listar: el producto sigue ahí. `docker compose down`
-no borra el volumen. `docker compose down -v` sí.
+`Ctrl+C` detiene los contenedores. `docker compose down` los elimina. El
+volumen de Mongo se conserva; `docker compose down -v` lo borra.
+
+## Durante la clase, con recarga
+
+No hace falta el contenedor de la API:
+
+```bash
+docker compose up -d db
+uv sync
+uv run fastapi dev main.py
+```
+
+No corras los dos a la vez: los dos quieren el puerto `8000`.
 
 ## Qué cambió
 
 ```bash
-git diff 05-repositorio..06-mongodb
+git diff 06-mongodb..07-compose
 ```
 
-- `app/products/mongo_repository.py` traduce `Producto` a un documento y al revés.
-- `app/config.py` lee `MONGO_*`. Dentro de Compose, más adelante, `MONGO_HOST`
-  va a ser `db` y no `localhost`.
-- `app/main.py` elige `RepositorioMongo` al arrancar. Las rutas no se enteran.
+Aparecen `Dockerfile` y el servicio `api` en `docker-compose.yaml`. El Python
+de las capas no cambia.
 
-## Verificar sin Docker
+## Verificar el código sin Docker
 
 ```bash
 bash verificar.sh
 ```
 
-Eso no prueba la conexión real. Prueba el mapeo del documento y que el
-contrato HTTP sigue igual contra el repositorio en memoria.
+Eso no construye la imagen. Para comprobar el ambiente completo, usá
+`docker compose up --build` y el `curl` de arriba.
 
 ## Siguiente rama
 
-`07-compose` mete también la API en Compose. Un comando levanta el ambiente.
+`08-autenticacion` suma Keycloak al mismo Compose. Leer productos sigue
+público; crear, reemplazar y borrar exigen el rol `admin`.
 
 ```bash
-git switch 07-compose
+git switch 08-autenticacion
 ```
