@@ -2,13 +2,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.products.domain import ProductoInvalido
+from app.products.repository import RepositorioEnMemoria
 from app.products.router import Router
 from app.products.service import ProductoNoEncontrado, Service
 
 
 def crear_aplicacion() -> FastAPI:
     aplicacion = FastAPI(title="Tienda")
-    aplicacion.include_router(Router(Service()).router)
+    aplicacion.include_router(Router(Service(RepositorioEnMemoria())).router)
     aplicacion.add_api_route("/", raiz, methods=["GET"])
     aplicacion.add_exception_handler(ProductoNoEncontrado, producto_no_encontrado)
     aplicacion.add_exception_handler(ProductoInvalido, producto_invalido)
