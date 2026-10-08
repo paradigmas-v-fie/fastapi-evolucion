@@ -1,10 +1,19 @@
-# 02 — Recurso REST
+# 03 — Capas
 
-Esta rama expone `/productos` en el mismo `main.py` de la rama anterior. El
-catálogo es una lista en memoria. Reiniciar el proceso vuelve a dejarla vacía.
+El recurso `/productos` queda partido en tres lugares. El catálogo sigue en
+memoria y el comando de ejecución no cambia.
 
-El contrato HTTP que aparece acá se mantiene en las ramas siguientes. Lo que
-cambia después es dónde viven las reglas y los datos, no los verbos.
+| Archivo | Responsabilidad |
+| --- | --- |
+| `app/products/router.py` | HTTP: verbo, path, código de estado |
+| `app/products/service.py` | Caso de uso y, por ahora, la lista |
+| `app/products/schemas.py` | DTO de entrada y de salida |
+| `app/main.py` | Arma la aplicación e incluye el router |
+| `main.py` | Punto de entrada estable |
+
+`Producto no encontrado` ya no se arma con `HTTPException` dentro del caso de
+uso. El service lanza su propia excepción y `app/main.py` la traduce a `404`.
+El service no importa FastAPI.
 
 ## Cómo ejecutar
 
@@ -13,39 +22,16 @@ uv sync
 uv run fastapi dev main.py
 ```
 
-```bash
-curl -i http://127.0.0.1:8000/productos
-
-curl -i -X POST http://127.0.0.1:8000/productos \
-  -H "Content-Type: application/json" \
-  -d '{"nombre":"Yerba","precio_base":1500}'
-```
-
-El `id` lo asigna el servidor. Usalo para consultar, reemplazar o borrar:
-
-| Operación | Resultado |
-| --- | --- |
-| `GET /productos` | `200` y la lista, vacía si todavía no hay productos |
-| `POST /productos` | `201` y el producto creado |
-| `GET /productos/{id}` | `200` y el producto; `404` si no existe |
-| `PUT /productos/{id}` | `200` y el producto con nombre y precio reemplazados; `404` si no existe |
-| `DELETE /productos/{id}` | `204` sin cuerpo; `404` si no existe |
-
-Un precio menor o igual a cero, o un nombre vacío, responde `422`: esa
-validación está en el modelo de Pydantic, al lado de la ruta. La rama
-`04-dominio` mueve esa regla al objeto.
-
-Swagger sigue en `http://127.0.0.1:8000/docs`.
+Las mismas peticiones de la rama anterior siguen valiendo. Un `POST` con precio
+`0` sigue respondiendo `422`, porque la regla todavía está en el schema.
 
 ## Qué cambió
 
 ```bash
-git diff 01-api-minima..02-recurso-rest
+git diff 02-recurso-rest..03-capas
 ```
 
-Sigue habiendo un solo archivo de aplicación. La ruta, el DTO y la lista están
-juntos. Eso alcanza para un recurso chico y se vuelve difícil de leer cuando
-aparecen reglas de negocio.
+El contrato HTTP no cambia. Cambia quién conoce la lista.
 
 ## Verificar
 
@@ -55,9 +41,9 @@ bash verificar.sh
 
 ## Siguiente rama
 
-`03-capas` separa router, service y schemas. El comando de ejecución no cambia
-y el catálogo sigue en memoria.
+`04-dominio` saca las reglas del schema y las pone en un `Producto`. El precio
+final con IVA aparece en la respuesta.
 
 ```bash
-git switch 03-capas
+git switch 04-dominio
 ```
