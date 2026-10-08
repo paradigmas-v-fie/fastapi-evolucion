@@ -1,19 +1,14 @@
-# 03 — Capas
+# 04 — Dominio
 
-El recurso `/productos` queda partido en tres lugares. El catálogo sigue en
-memoria y el comando de ejecución no cambia.
+El catálogo deja de guardar diccionarios. El service construye un `Producto` y
+el schema solo transporta datos. El IVA no se calcula en la ruta.
 
-| Archivo | Responsabilidad |
-| --- | --- |
-| `app/products/router.py` | HTTP: verbo, path, código de estado |
-| `app/products/service.py` | Caso de uso y, por ahora, la lista |
-| `app/products/schemas.py` | DTO de entrada y de salida |
-| `app/main.py` | Arma la aplicación e incluye el router |
-| `main.py` | Punto de entrada estable |
+La respuesta ahora incluye `precio_final`. Para una yerba de `1500`, el precio
+final es `1815`: el 21 % vive en `IVA`, dentro del dominio.
 
-`Producto no encontrado` ya no se arma con `HTTPException` dentro del caso de
-uso. El service lanza su propia excepción y `app/main.py` la traduce a `404`.
-El service no importa FastAPI.
+Un precio no positivo o un nombre vacío responde `400`. Antes respondía `422`,
+porque la regla estaba en Pydantic. Un JSON al que le falta un campo sigue
+respondiendo `422`: eso es forma del mensaje, no una regla del producto.
 
 ## Cómo ejecutar
 
@@ -22,16 +17,25 @@ uv sync
 uv run fastapi dev main.py
 ```
 
-Las mismas peticiones de la rama anterior siguen valiendo. Un `POST` con precio
-`0` sigue respondiendo `422`, porque la regla todavía está en el schema.
+```bash
+curl -s -X POST http://127.0.0.1:8000/productos \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Yerba","precio_base":1500}'
+```
 
 ## Qué cambió
 
 ```bash
-git diff 02-recurso-rest..03-capas
+git diff 03-capas..04-dominio
 ```
 
-El contrato HTTP no cambia. Cambia quién conoce la lista.
+- `app/products/domain.py` protege nombre y precio, y calcula `precio_final`.
+- `ProductoDetalle.desde_dominio` es el único cruce entre el objeto y el JSON.
+- `app/main.py` traduce `ProductoInvalido` a `400`. El dominio no importa FastAPI.
+
+En H1 el precio se componía con más modificadores. Acá el API siempre aplica
+IVA para que el borde se pueda leer. Agregar otra variante es cambiar
+`Producto.precio_final`, no el router.
 
 ## Verificar
 
@@ -41,9 +45,9 @@ bash verificar.sh
 
 ## Siguiente rama
 
-`04-dominio` saca las reglas del schema y las pone en un `Producto`. El precio
-final con IVA aparece en la respuesta.
+`05-repositorio` le saca la lista al service. El caso de uso pide un
+repositorio; la implementación de esta etapa sigue siendo memoria.
 
 ```bash
-git switch 04-dominio
+git switch 05-repositorio
 ```

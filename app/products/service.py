@@ -1,5 +1,4 @@
-import uuid
-
+from app.products.domain import Producto
 from app.products.schemas import ProductoActualizar, ProductoCrear, ProductoDetalle
 
 
@@ -10,37 +9,32 @@ class ProductoNoEncontrado(Exception):
 
 
 class Service:
-    """Casos de uso del catálogo. En esta rama también guarda los datos."""
+    """Casos de uso. Traduce DTOs a Producto y, por ahora, guarda la lista."""
 
     def __init__(self) -> None:
-        self._productos: list[dict] = []
+        self._productos: list[Producto] = []
 
     def listar(self) -> list[ProductoDetalle]:
-        return [ProductoDetalle(**producto) for producto in self._productos]
+        return [ProductoDetalle.desde_dominio(producto) for producto in self._productos]
 
     def crear(self, datos: ProductoCrear) -> ProductoDetalle:
-        producto = {
-            "id": str(uuid.uuid4()),
-            "nombre": datos.nombre,
-            "precio_base": datos.precio_base,
-        }
+        producto = Producto(nombre=datos.nombre, precio_base=datos.precio_base)
         self._productos.append(producto)
-        return ProductoDetalle(**producto)
+        return ProductoDetalle.desde_dominio(producto)
 
     def obtener(self, producto_id: str) -> ProductoDetalle:
-        return ProductoDetalle(**self._buscar(producto_id))
+        return ProductoDetalle.desde_dominio(self._buscar(producto_id))
 
     def actualizar(self, producto_id: str, datos: ProductoActualizar) -> ProductoDetalle:
         producto = self._buscar(producto_id)
-        producto["nombre"] = datos.nombre
-        producto["precio_base"] = datos.precio_base
-        return ProductoDetalle(**producto)
+        producto.actualizar(datos.nombre, datos.precio_base)
+        return ProductoDetalle.desde_dominio(producto)
 
     def eliminar(self, producto_id: str) -> None:
         self._productos.remove(self._buscar(producto_id))
 
-    def _buscar(self, producto_id: str) -> dict:
+    def _buscar(self, producto_id: str) -> Producto:
         for producto in self._productos:
-            if producto["id"] == producto_id:
+            if producto.id == producto_id:
                 return producto
         raise ProductoNoEncontrado(producto_id)

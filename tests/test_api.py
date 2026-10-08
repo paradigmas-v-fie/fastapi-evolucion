@@ -19,6 +19,7 @@ def test_crear_listar_y_obtener(client):
     cuerpo = creado.json()
     assert cuerpo["nombre"] == "Yerba"
     assert cuerpo["precio_base"] == 1500
+    assert cuerpo["precio_final"] == 1815.0
     assert cuerpo["id"]
 
     listado = client.get("/productos")
@@ -41,6 +42,7 @@ def test_actualizar_reemplaza_nombre_y_precio(client):
     assert respuesta.json()["id"] == creado["id"]
     assert respuesta.json()["nombre"] == "Yerba suave"
     assert respuesta.json()["precio_base"] == 2000
+    assert respuesta.json()["precio_final"] == 2420.0
 
 
 def test_eliminar_despues_responde_404(client):
@@ -60,7 +62,21 @@ def test_obtener_inexistente_responde_404(client):
     assert respuesta.json()["detail"] == "Producto no encontrado"
 
 
-def test_precio_no_positivo_responde_422(client):
+def test_precio_no_positivo_lo_rechaza_el_dominio(client):
     respuesta = client.post("/productos", json={"nombre": "Yerba", "precio_base": 0})
+
+    assert respuesta.status_code == 400
+    assert respuesta.json()["detail"] == "El precio base tiene que ser mayor a cero"
+
+
+def test_nombre_vacio_lo_rechaza_el_dominio(client):
+    respuesta = client.post("/productos", json={"nombre": "   ", "precio_base": 1500})
+
+    assert respuesta.status_code == 400
+    assert respuesta.json()["detail"] == "El nombre no puede estar vacío"
+
+
+def test_falta_un_campo_responde_422(client):
+    respuesta = client.post("/productos", json={"nombre": "Yerba"})
 
     assert respuesta.status_code == 422
