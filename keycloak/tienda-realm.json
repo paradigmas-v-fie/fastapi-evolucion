@@ -1,0 +1,88 @@
+{
+  "realm": "tienda",
+  "displayName": "Tienda",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Puede modificar el catálogo"
+      },
+      {
+        "name": "user",
+        "description": "Puede identificarse"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "tienda-api",
+      "name": "Tienda API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "redirectUris": ["http://localhost:8000/*"],
+      "webOrigins": ["http://localhost:8000"],
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@tienda.test",
+      "firstName": "Admin",
+      "lastName": "Tienda",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "alumno",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "alumno@tienda.test",
+      "firstName": "Alumno",
+      "lastName": "Tienda",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "alumno",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    }
+  ]
+}

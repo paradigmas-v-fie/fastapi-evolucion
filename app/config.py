@@ -13,6 +13,9 @@ class Configuracion:
     mongo_host: str = os.getenv("MONGO_HOST", "localhost")
     mongo_port: str = os.getenv("MONGO_PORT", "27017")
     mongo_db: str = os.getenv("MONGO_DB", "tienda")
+    keycloak_url: str = os.getenv("KEYCLOAK_URL", "http://localhost:8080")
+    keycloak_realm: str = os.getenv("KEYCLOAK_REALM", "tienda")
+    keycloak_client_id: str = os.getenv("KEYCLOAK_CLIENT_ID", "tienda-api")
 
     @property
     def mongo_uri(self) -> str:

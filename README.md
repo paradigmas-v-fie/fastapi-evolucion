@@ -1,14 +1,18 @@
-# 07 — Compose
+# 08 — Autenticación
 
-Un comando levanta la API y MongoDB. La aplicación que corre adentro del
-contenedor es la misma de la rama anterior: cambia el ambiente, no las capas.
+Leer el catálogo sigue siendo público. Crear, reemplazar y borrar exigen un
+token del realm `tienda` con el rol `admin`. Keycloak entra al mismo Compose.
+No hay que crear el realm a mano: se importa `keycloak/tienda-realm.json` al
+arrancar.
 
-Dentro de la red de Compose la base se llama `db`. Por eso el servicio `api`
-define `MONGO_HOST=db`. Si corrés la API en el host, el default sigue siendo
-`localhost`, porque el puerto `27017` está publicado.
+| Usuario | Contraseña | Rol | Puede escribir |
+| --- | --- | --- | --- |
+| `admin` | `admin` | `admin` | sí |
+| `alumno` | `alumno` | `user` | no |
 
-El contenedor usa `fastapi run`: sin recarga automática. Para programar con
-recarga, levantá solo la base y seguí usando `fastapi dev`.
+Esas claves son del entorno local de la cursada. La consola de administración
+de Keycloak, en el realm `master`, usa el usuario de arranque `admin` /
+`admin` y no es el mismo usuario que escribe productos.
 
 ## Ambiente completo
 
@@ -16,53 +20,70 @@ recarga, levantá solo la base y seguí usando `fastapi dev`.
 docker compose up --build
 ```
 
-La API queda en `http://127.0.0.1:8000`. Compose espera a que Mongo responda
-antes de arrancar la API.
+Keycloak tarda más que la API. Esperá a que abra `http://127.0.0.1:8080` antes
+de pedir un token. Hasta ese momento, una escritura responde `503`.
 
 ```bash
-curl -s -X POST http://127.0.0.1:8000/productos \
+TOKEN=$(curl -s -X POST \
+  http://127.0.0.1:8080/realms/tienda/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=tienda-api" \
+  -d "grant_type=password" \
+  -d "username=admin" \
+  -d "password=admin" \
+  | python -c "import json, sys; print(json.load(sys.stdin)['access_token'])")
+
+curl -i http://127.0.0.1:8000/productos
+
+curl -i -X POST http://127.0.0.1:8000/productos \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"nombre":"Yerba","precio_base":1500}'
 ```
 
-`Ctrl+C` detiene los contenedores. `docker compose down` los elimina. El
-volumen de Mongo se conserva; `docker compose down -v` lo borra.
+Sin encabezado, esa escritura responde `401`. Con el token de `alumno`,
+responde `403`.
+
+El token pedido a `localhost` dice que lo emitió `localhost`. La API, dentro
+de Compose, busca las claves públicas en `http://keycloak:8080`. La validación
+compara el realm (`/realms/tienda`), no el host. Está explicado en
+`app/auth/keycloak.py`.
 
 ## Durante la clase, con recarga
 
-No hace falta el contenedor de la API:
-
 ```bash
-docker compose up -d db
+docker compose up -d db keycloak
 uv sync
 uv run fastapi dev main.py
 ```
 
-No corras los dos a la vez: los dos quieren el puerto `8000`.
+En el host no hace falta exportar `KEYCLOAK_URL`: el default ya es
+`http://localhost:8080`. No levantes también el servicio `api` si vas a usar
+el puerto `8000` en la máquina.
 
 ## Qué cambió
 
 ```bash
-git diff 06-mongodb..07-compose
+git diff 07-compose..08-autenticacion
 ```
 
-Aparecen `Dockerfile` y el servicio `api` en `docker-compose.yaml`. El Python
-de las capas no cambia.
+- `app/auth/dependencies.py` exige el rol en las rutas que escriben.
+- `GET /productos` y `GET /productos/{id}` no cambiaron.
+- El service y el dominio no conocen a Keycloak.
 
-## Verificar el código sin Docker
+## Verificar sin Docker ni Keycloak
 
 ```bash
 bash verificar.sh
 ```
 
-Eso no construye la imagen. Para comprobar el ambiente completo, usá
-`docker compose up --build` y el `curl` de arriba.
+Eso cubre el `401`, el `403` y que el listado siga público. No pide un token
+real.
 
-## Siguiente rama
+## Fin del recorrido
 
-`08-autenticacion` suma Keycloak al mismo Compose. Leer productos sigue
-público; crear, reemplazar y borrar exigen el rol `admin`.
+Esta es la última capa. Para volver al mapa de ramas:
 
 ```bash
-git switch 08-autenticacion
+git switch main
 ```

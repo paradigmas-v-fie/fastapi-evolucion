@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
+from app.auth.dependencies import requiere_rol
 from app.dependencies import obtener_servicio
 from app.products.schemas import ProductoActualizar, ProductoCrear, ProductoDetalle
 from app.products.service import Service
@@ -16,14 +17,21 @@ class Router:
             self.crear,
             methods=["POST"],
             status_code=status.HTTP_201_CREATED,
+            dependencies=[Depends(requiere_rol("admin"))],
         )
         self.router.add_api_route("/{producto_id}", self.obtener, methods=["GET"])
-        self.router.add_api_route("/{producto_id}", self.actualizar, methods=["PUT"])
+        self.router.add_api_route(
+            "/{producto_id}",
+            self.actualizar,
+            methods=["PUT"],
+            dependencies=[Depends(requiere_rol("admin"))],
+        )
         self.router.add_api_route(
             "/{producto_id}",
             self.eliminar,
             methods=["DELETE"],
             status_code=status.HTTP_204_NO_CONTENT,
+            dependencies=[Depends(requiere_rol("admin"))],
         )
 
     def listar(self, servicio: Service = Depends(obtener_servicio)) -> list[ProductoDetalle]:
