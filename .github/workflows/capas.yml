@@ -1,0 +1,33 @@
+name: capas
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rama:
+          - 01-api-minima
+          - 02-recurso-rest
+          - 03-capas
+          - 04-dominio
+          - 05-repositorio
+          - 06-mongodb
+          - 07-compose
+          - 08-autenticacion
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.rama }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+      - run: bash verificar.sh
